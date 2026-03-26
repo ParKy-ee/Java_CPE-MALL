@@ -128,14 +128,18 @@ public class Display {
 
         while (true) {
 
+            if (auth.getUser() == null) {
+                return;
+            }
+
             System.out.println("--------------หน้าผู้ดูแลระบบ-----------------");
             System.out.println("1. เพิ่มสินค้า");
             System.out.println("2. ลบสินค้า");
             System.out.println("3. แก้ไขสินค้า");
             System.out.println("4. แสดงสินค้า");
-            System.out.println("5. ลบสินค้า");
-            System.out.println("6. แสดงยอดขาย");
-            System.out.println("7. ออก");
+            System.out.println("5. แสดงยอดขาย");
+            System.out.println("6. ไปยังน้าหลัก");
+            System.out.println("7. ออกจากระบบ");
             System.out.println("------------------------------------------------");
 
             int choice = sc.nextInt();
@@ -160,14 +164,15 @@ public class Display {
                     break;
 
                 case 5:
-                    productDisplay.removeProduct();
-                    break;
-
-                case 6:
                     showSales();
                     break;
 
+                case 6:
+                    showUserMenu();
+                    break;
+
                 case 7:
+                    auth.logout();
                     return;
 
                 default:
@@ -178,9 +183,11 @@ public class Display {
     }
 
     public void showUserMenu() {
-        User currentUser = auth.getUser();
-
         while (true) {
+            User currentUser = auth.getUser();
+            if (currentUser == null) {
+                return;
+            }
 
             System.out.println("--------------หน้าผู้ใช้-----------------");
             System.out.println("1. แสดงสินค้า");
@@ -189,11 +196,18 @@ public class Display {
             System.out.println("4. ลบสินค้าออกจากตะกร้า");
             System.out.println("5. เติมเงิน");
             System.out.println("6. ชำระสินค้า");
-            System.out.println("7. ออก");
-            System.out.println('\n');
-            if (currentUser != null) {
-                System.out.println("เงินในกระเป๋า: " + currentUser.getWallet().getBalance());
+            System.out.println("7. ตรวจสอบบิล");
+
+            boolean isAdmin = currentUser.getRole().equals("Admin");
+            if (isAdmin) {
+                System.out.println("8. กลับสู่หน้าผู้ดูแลระบบ");
+                System.out.println("9. ออกจากระบบ");
+            } else {
+                System.out.println("8. ออกจากระบบ");
             }
+
+            System.out.println('\n');
+            System.out.println("เงินในกระเป๋า: " + currentUser.getWallet().getBalance());
             System.out.println("ยอดรวม: " + cartDisplay.getTotalPrice());
             System.out.println("------------------------------------------------");
 
@@ -221,9 +235,24 @@ public class Display {
                 case 6:
                     pay();
                     break;
-
                 case 7:
-                    return;
+                    checkBills();
+                    break;
+                case 8:
+                    if (isAdmin) {
+                        return;
+                    } else {
+                        auth.logout();
+                        return;
+                    }
+                case 9:
+                    if (isAdmin) {
+                        auth.logout();
+                        return;
+                    } else {
+                        System.out.println("ไม่ถูกต้อง");
+                    }
+                    break;
                 default:
                     System.out.println("ไม่ถูกต้อง");
             }
@@ -259,6 +288,38 @@ public class Display {
         user.getWallet().removeBalance(totalPrice);
         cartDisplay.getCart().getCartItems().clear();
         System.out.println("ชำระเงินสำเร็จ");
+    }
+
+    public void checkBills() {
+        User user = auth.getUser();
+        if (user == null) {
+            return;
+        }
+
+        System.out.println("-------------- บิลของคุณ -----------------");
+        boolean foundMatch = false;
+
+        for (Receipt receipt : receiptManage.getReceipts()) {
+            if (receipt.getUser().getUsername().equals(user.getUsername())) {
+                System.out.println("เลขที่ใบเสร็จ: " + receipt.getId());
+                System.out.println("ยอดรวม: " + receipt.getTotal() + " บาท");
+                System.out.println("รายการสินค้า:");
+
+                for (CartItem item : receipt.getCart().getCartItems()) {
+                    System.out.println(item.getProduct().getName()
+                            + " x " + item.getQuantity()
+                            + " = " + (item.getProduct().getPrice() * item.getQuantity()) + " บาท");
+                }
+
+                System.out.println("--------------------------------");
+                foundMatch = true;
+            }
+        }
+
+        if (!foundMatch) {
+            System.out.println("ยังไม่มีรายการสั่งซื้อ");
+            System.out.println("--------------------------------");
+        }
     }
 
     public void showSales() {

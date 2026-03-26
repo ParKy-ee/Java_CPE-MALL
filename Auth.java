@@ -51,7 +51,7 @@ public class Auth {
     }
 
     public void logout() {
-        users.remove(users.size() - 1);
+        currentUser = null;
     }
 
 }
